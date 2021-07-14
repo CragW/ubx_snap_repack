@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import requests
+import argparse
 import json
 import os
 import tempfile
@@ -69,16 +70,15 @@ def repack_snap_no_warn(snap_file: str):
                         fd.writelines(contents)
 
                 # wrap up the new one
-                new_filedir  = os.path.dirname(snap_file)
-                new_file     = os.path.join(new_filedir, repack_fwupd_filename)
-                print("[Info] wrap up %s" % tmpdir.name)
+                new_file     = os.path.join(os.getcwd(), repack_fwupd_filename)
+                print("[Info] wrap up source directory %s" % tmpdir.name)
 
                 subprocess.run(["snap",
                                 "pack",
                                 "--filename",
                                 repack_fwupd_filename,
                                 tmpdir.name,
-                                new_filedir],
+                                os.getcwd()],
                                 check=True)
 
                 if not os.path.isfile(new_file):
@@ -90,20 +90,24 @@ def repack_snap_no_warn(snap_file: str):
                 print("[Error] ", e)
 
 def main(argv):
+        parser = argparse.ArgumentParser()
+        parser.add_argument('--snap', help="Use existing snap rather latest/stable")
+        args = parser.parse_args()
+
         snap_download_file = os.path.join(os.getcwd(), download_fwupd_filename)
         snap_new_file = os.path.join(os.getcwd(), repack_fwupd_filename)
-
-        # clean up old files
-        if os.path.isfile(snap_download_file):
-                os.remove(snap_download_file)
 
         if os.path.isfile(snap_new_file):
                 os.remove(snap_new_file)
 
-        # download snap and rework it!
-        http_get_snap(snap_download_file)
-        repack_snap_no_warn(snap_download_file)
+        if args.snap and os.path.isfile(args.snap):
+                snap_download_file = args.snap
+        else:
+                if os.path.isfile(snap_download_file):
+                        os.remove(snap_download_file)
+                http_get_snap(snap_download_file)
 
+        repack_snap_no_warn(snap_download_file)
         return True
 
 ## Entry Point ##
